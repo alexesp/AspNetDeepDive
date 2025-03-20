@@ -26,7 +26,7 @@ app.Run(async (HttpContext context) =>
             var employees = EmployessRepository.GetEmployees();
             foreach (var employee in employees)
             {
-                await context.Response.WriteAsync($"{employee.Name} : {employee.Position}\r\n");
+                await context.Response.WriteAsync($"{employee.Id} : {employee.Name} : {employee.Position}\r\n");
             }
         }
     }
@@ -39,6 +39,7 @@ app.Run(async (HttpContext context) =>
             var employee = JsonSerializer.Deserialize<Employee>(body);
 
             EmployessRepository.AddEmployee(employee);
+            await context.Response.WriteAsync("Employee is added successfully.");
         }
     }
     else if (context.Request.Method == "PUT")
@@ -49,15 +50,44 @@ app.Run(async (HttpContext context) =>
             var body = await reader.ReadToEndAsync();
             var employee = JsonSerializer.Deserialize<Employee>(body);
 
-          var result = EmployessRepository.UpdateEmployee(employee);
+            var result = EmployessRepository.UpdateEmployee(employee);
 
-            if(result)
+            if (result)
             {
                 await context.Response.WriteAsync("Employee updated successfully.");
             }
             else
             {
                 await context.Response.WriteAsync("Employee not found.");
+            }
+        }
+    }
+    else if (context.Request.Method == "DELETE")
+    {
+        if (context.Request.Path.StartsWithSegments("/employees"))
+        {
+            if (context.Request.Query.ContainsKey("id"))
+            {
+                var id = context.Request.Query["id"];
+                if (int.TryParse(id, out int employeeId))
+                {
+                    if (context.Request.Headers["Authorization"] == "frank")
+                    {
+                        var result = EmployessRepository.DeleteEmployee(employeeId);
+                        if (result)
+                        {
+                            await context.Response.WriteAsync("Employee is deleted successfully.");
+                        }
+                        else
+                        {
+                            await context.Response.WriteAsync("Employee not found.");
+                        }
+                    }
+                    else
+                    {
+                        await context.Response.WriteAsync("You are not authorized to delete.");
+                    }
+                }
             }
         }
     }
@@ -80,18 +110,18 @@ static class EmployessRepository
     {
         if (employee != null)
         {
-            employees.Add(employee); 
+            employees.Add(employee);
         }
-        
+
 
     }
 
     public static bool UpdateEmployee(Employee? employee)
     {
-        if(employee != null)
+        if (employee != null)
         {
             var emp = employees.FirstOrDefault(x => x.Id == employee.Id);
-            if(emp != null)
+            if (emp != null)
             {
                 emp.Name = employee.Name;
                 emp.Position = employee.Position;
@@ -99,6 +129,17 @@ static class EmployessRepository
                 return true;
             }
 
+        }
+        return false;
+    }
+
+    public static bool DeleteEmployee(int id)
+    {
+        var emloyee = employees.FirstOrDefault(x =>x.Id == id);
+        if(emloyee != null)
+        {
+            employees.Remove(emloyee);
+            return true;
         }
         return false;
     }
