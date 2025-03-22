@@ -33,6 +33,11 @@ app.Use(async (HttpContext context, RequestDelegate next) =>
 });
 //app.MapGet("/", () => "Hello World!");
 
+app.Run(async (HttpContext context)=>
+{
+    await context.Response.WriteAsync("Middleware #4: Processed.\r\n");
+});
+
 app.Run(async (HttpContext context) =>
 {
     if (context.Request.Method == "GET")
