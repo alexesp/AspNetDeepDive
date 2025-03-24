@@ -1,17 +1,87 @@
 using System.Text.Json;
+using AspNetDeepDive.MiddleComponents;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 
 var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddTransient<MyCustomMiddleware>();
+builder.Services.AddTransient<MyCustomExceptionHandler>();
+
 var app = builder.Build();
+
+app.UseMiddleware<MyCustomExceptionHandler>();
 
 //Middleware 1
 app.Use(async (HttpContext context, RequestDelegate next) =>
 {
+    context.Response.Headers["MyHeader"] = "My header content";
    await context.Response.WriteAsync("Middleware #1: Before calling next\r\n");
-
-   await next(context);
+    //context.Response.Headers["MyHeader"] = "My header content";
+    await next(context);
 
     await context.Response.WriteAsync("Middleware #1: After calling next\r\n");
+});
+
+//app.MapWhen((context) =>
+//{
+//    return context.Request.Path.StartsWithSegments("/employees") &&
+//            context.Request.Query.ContainsKey("id");
+//},
+//(appBuilder) =>
+//{
+//    appBuilder.Use(async (HttpContext context, RequestDelegate next) =>
+//    {
+//        await context.Response.WriteAsync("Middleware #7: Before calling next\r\n");
+
+//        await next(context);
+
+//        await context.Response.WriteAsync("Middleware #7: After calling next\r\n");
+//    });
+//});
+
+//app.UseWhen((context) =>
+//{
+//    return context.Request.Path.StartsWithSegments("/employees") &&
+//            context.Request.Query.ContainsKey("id");
+//},
+//(appBuilder) =>
+//{
+//    appBuilder.Use(async (HttpContext context, RequestDelegate next) =>
+//    {
+//        await context.Response.WriteAsync("Middleware #8: Before calling next\r\n");
+
+//        await next(context);
+
+//        await context.Response.WriteAsync("Middleware #8: After calling next\r\n");
+//    });
+//});
+
+app.UseMiddleware<MyCustomMiddleware>();
+
+
+
+
+app.Map("/employees", (appBuilder) =>
+{
+    
+    appBuilder.Use(async (HttpContext context, RequestDelegate next) =>
+    {
+        throw new ApplicationException("Exception for testing.");
+        await context.Response.WriteAsync("Middleware #5: Before calling next\r\n");
+
+        await next(context);
+
+        await context.Response.WriteAsync("Middleware #5: After calling next\r\n");
+    });
+
+    appBuilder.Use(async (HttpContext context, RequestDelegate next) =>
+    {
+        await context.Response.WriteAsync("Middleware #6: Before calling next\r\n");
+
+        await next(context);
+
+        await context.Response.WriteAsync("Middleware #6: After calling next\r\n");
+    });
 });
 //MIddleware 2
 app.Use(async (HttpContext context, RequestDelegate next) =>
