@@ -41,7 +41,7 @@ app.UseEndpoints(endpoints =>
         await context.Response.WriteAsync("<ul>");
         foreach (var employee in employees)
         {
-            await context.Response.WriteAsync($"<li><b>{employee.Id}</b> : {employee.Name} : {employee.Position}</li>");
+            await context.Response.WriteAsync($"<li><b>{employee.Id}</b> : {employee.Name} : {employee.Position}  : {employee.Salary}</li>");
         }
         await context.Response.WriteAsync("</ul>");
     });
@@ -88,7 +88,24 @@ app.UseEndpoints(endpoints =>
     });
     endpoints.MapPut("/employees", async (HttpContext context) =>
     {
-        await context.Response.WriteAsync("Update an employees");
+        if (context.Request.Path.StartsWithSegments("/employees"))
+        {
+            using var reader = new StreamReader(context.Request.Body);
+            var body = await reader.ReadToEndAsync();
+            var employee = JsonSerializer.Deserialize<Employee>(body);
+
+            var result = EmployeesRepository.UpdateEmployee(employee);
+
+            if (result)
+            {
+                await context.Response.WriteAsync("Employee updated successfully.");
+            }
+            else
+            {
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync("Employee not found.");
+            }
+        }
     });
     endpoints.MapDelete("/employees/{id:int}", async (HttpContext context) =>
     {
